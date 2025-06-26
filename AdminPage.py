@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
-from configuracion import page, get_db_connection
+from configuracion import page, get_db_connection, get_config_boton_volver
 
 class page_admin(page):
     def __init__(self, nombre_usuario="nombre de usuario"):
@@ -11,12 +11,13 @@ class page_admin(page):
         self.root.geometry(self.background[1])
         self.render_header(nombre_usuario)
 
-        # Botón Volver
+        # Botón Volver/Cerrar sesión
+        boton_volver_cfg = get_config_boton_volver()
         tk.Button(
-            self.root, text="Volver", bg="#B3C6E7", fg="#222",
-            font=(self.tittle[3], 10, "bold"), relief="raised",
-            command=self.volver_login
-        ).pack(anchor="nw", padx=15, pady=(5, 0))
+            self.root, text="Serrar sesión", command=self.volver_login,
+            bg=boton_volver_cfg["bg"], fg=boton_volver_cfg["fg"],
+            font=boton_volver_cfg["font"], relief=boton_volver_cfg["relief"]
+        ).pack(anchor=boton_volver_cfg["anchor"], padx=boton_volver_cfg["padx"], pady=boton_volver_cfg["pady"])
 
         # Título
         tk.Label(

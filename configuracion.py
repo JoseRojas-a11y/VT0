@@ -22,6 +22,18 @@ def get_config_boton() -> Tuple[str, str, str, int, int, int, str]:
     # Texto del botón, color de fondo, color del texto, tamaño, tamaño de fuente, alto, tipografía
     return "Iniciar sesión", "#FFF8E1", "#9E2A2F", 16, 20, 2, "Helvetica"  # Botón crema, texto vino
 
+def get_config_boton_volver() -> dict:
+    """Estilo estándar para botones de volver/cerrar sesión."""
+    return {
+        "bg": "#B3C6E7",
+        "fg": "#222",
+        "font": (get_config_titulo()[3], 10, "bold"),
+        "relief": "raised",
+        "padx": 15,
+        "pady": (5, 0),
+        "anchor": "nw"
+    }
+
 def get_db_connection():
     """Devuelve una conexión a la base de datos MySQL para ser usada en otras páginas."""
     return mysql.connector.connect(
