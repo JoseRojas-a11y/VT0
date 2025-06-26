@@ -22,9 +22,8 @@ class page_admin(page):
         self.root.configure(bg=self.background[0])
         self.root.geometry(self.background[1])
 
-        # Icono de notificaciones y perfil (arriba a la derecha)
-        self.perfil = tk.Label(self.root, text='🔔 [Foto Perfil]', bg=self.background[0], anchor='ne')
-        self.perfil.pack(pady=(10, 0), anchor='ne', padx=10)
+        # encabezado
+        self.render_header()
 
         # Título "Hola, nombre!"
         self.label_saludo = tk.Label(self.root, text="¡Hola, nombre!", 
@@ -34,7 +33,7 @@ class page_admin(page):
 
         # Imagen del logo redimensionada
         img = Image.open(self.logo[2])
-        img = img.resize((120, 120), Image.LANCZOS)  # Redimensionar la imagen
+        img = img.resize((120, 120), Image.LANCZOS)  # type: ignore
         self.logo_img = ImageTk.PhotoImage(img)
         self.logo_label = tk.Label(self.root, image=self.logo_img, bg=self.logo[1])
         self.logo_label.pack(pady=10)
@@ -54,7 +53,7 @@ class page_admin(page):
         estilo_boton = {
             "width": 20,
             "height": 1,
-            "bg": "white",
+            "bg": self.background[0],
             "bd": 1,
             "relief": "solid",
             "font": (self.tittle[3], 12)
