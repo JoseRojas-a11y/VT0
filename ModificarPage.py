@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
-from config import page, get_config_entrada, get_config_boton, get_db_connection
+from configuracion import page, get_config_entrada, get_config_boton, get_db_connection
 
 class ModificarPage(page):
     def __init__(self, tipo, codigo, nombre_usuario="Administrador"):

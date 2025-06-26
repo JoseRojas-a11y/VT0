@@ -1,7 +1,7 @@
 import tkinter as tk
-from config import page
+from configuracion import page
 from PIL import Image, ImageTk
-from config import get_db_connection
+from configuracion import get_db_connection
 
 class page_student(page):
     def __init__(self, nombre_usuario="Alumno", codigo_alumno=None):
