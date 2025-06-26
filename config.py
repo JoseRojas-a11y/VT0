@@ -1,4 +1,5 @@
 from typing import Tuple
+import tkinter as tk
 
 def get_config_fondo() -> Tuple[str, str]:
     
@@ -6,17 +7,17 @@ def get_config_fondo() -> Tuple[str, str]:
     
     return "#9E2A2F", "375x667"
 
-def get_config_titulo() -> Tuple[str, int, str, str, str]:
+def get_config_titulo() -> Tuple[str, int, str, str]:
     
     #Texto del titulo, tamaño de fuente, color de fondo, color del texto y la tipografia
     
-    return "Bienvenido a VT0", 24, "white", "#9E2A2F", "Helvetica"
+    return "Bienvenido a VT0", 24, "black", "Helvetica"
 
-def get_config_logo() -> Tuple[str, int, str, str, str]:
+def get_config_logo() -> Tuple[str, str, str]:
     
     #Texto del logo, tamaño de fuente, color de fondo, color del texto y la tipografia
     
-    return "Universidad Nacional\nde\nIngenieria", 18, "white", "#9E2A2F", "Helvetica"
+    return "Universidad Nacional\nde\nIngenieria", "#9E2A2F", "logo_uni.png"
 
 def get_config_entrada() -> Tuple[str, int, str, str]:
     
@@ -32,6 +33,7 @@ def get_config_boton() -> Tuple[str, str, str, int, int, int, str]:
 
 class page():
     def __init__(self):
+        self.root =tk.Tk()
         self.background = get_config_fondo()
         self.tittle = get_config_titulo()
         self.logo = get_config_logo()
