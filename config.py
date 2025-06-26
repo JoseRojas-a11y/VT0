@@ -24,8 +24,14 @@ def get_config_entrada() -> Tuple[str, int, str, str]:
     
     return "Código UNI:", 14, "white", "Helvetica"
 
-def get_config_boton() -> Tuple[str, str, str, str, int, int, str]:
+def get_config_boton() -> Tuple[str, str, str, int, int, int, str]:
     
     #Texto del boton, color de fondo, color del texto, tamaño, tamaño de la fuente y la tipografia.
     
-    return "Iniciar sesión", "#F5F5DC", "black", 16, 20, 2, "Helvetica" 
+    return "Iniciar sesión", "#F5F5DC", "black", 16, 20, 2, "Helvetica"
+
+class page():
+    def __init__(self):
+        self.background = get_config_fondo()
+        self.tittle = get_config_titulo()
+        self.logo = get_config_logo()
