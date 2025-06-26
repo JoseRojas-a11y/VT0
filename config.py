@@ -1,5 +1,6 @@
 from typing import Tuple
 import tkinter as tk
+import mysql.connector
 
 def get_config_fondo() -> Tuple[str, str]:
     # Color de fondo y dimensiones de la ventana.
@@ -20,6 +21,15 @@ def get_config_entrada() -> Tuple[str, int, str, str]:
 def get_config_boton() -> Tuple[str, str, str, int, int, int, str]:
     # Texto del botón, color de fondo, color del texto, tamaño, tamaño de fuente, alto, tipografía
     return "Iniciar sesión", "#FFF8E1", "#9E2A2F", 16, 20, 2, "Helvetica"  # Botón crema, texto vino
+
+def get_db_connection():
+    """Devuelve una conexión a la base de datos MySQL para ser usada en otras páginas."""
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="JoSeSiTo%_10",  # Ajusta tu contraseña si es necesario
+        database="db_vt0"
+    )
 
 class page():
     def __init__(self):

@@ -16,6 +16,11 @@ def conectar():
 class page_admin(page):
     def __init__(self, nombre_usuario="nombre de usuario"):
         super().__init__()
+        if not hasattr(self, 'root'):
+            self.root = tk.Tk()
+        self.root.title("Panel Administrador")
+        
+        # Configuración de la ventana
         self.root.configure(bg=self.background[0])
         self.root.geometry(self.background[1])
         self.render_header(nombre_usuario)
