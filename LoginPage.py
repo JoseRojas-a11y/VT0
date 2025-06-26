@@ -15,7 +15,7 @@ class LoginPage(page):
         # Logo centrado
         logo_cfg = get_config_logo()
         img = Image.open(logo_cfg[2])
-        img = img.resize((110, 110), Image.Resampling.LANCZOS)
+        img = img.resize((200, 252), Image.Resampling.LANCZOS)
         self.logo_img = ImageTk.PhotoImage(img)
         self.logo_label = tk.Label(self.root, image=self.logo_img, bg=self.background[0])
         self.logo_label.pack(pady=(30, 10))

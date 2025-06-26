@@ -1,17 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
-import mysql.connector
-from config import page
-
-# Conexión a la base de datos
-def conectar():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="password",
-        database="db_vt0"
-    )
+from config import page, get_db_connection
 
 class page_admin(page):
     def __init__(self, nombre_usuario="nombre de usuario"):
@@ -19,11 +9,15 @@ class page_admin(page):
         if not hasattr(self, 'root'):
             self.root = tk.Tk()
         self.root.title("Panel Administrador")
-        
+
         # Configuración de la ventana
         self.root.configure(bg=self.background[0])
         self.root.geometry(self.background[1])
         self.render_header(nombre_usuario)
+
+        # Botón Volver
+        self.btn_volver = tk.Button(self.root, text="Volver", bg="#B3C6E7", fg="#222", font=(self.tittle[3], 10, "bold"), relief="raised", command=self.volver_login)
+        self.btn_volver.pack(anchor="nw", padx=15, pady=(5, 0))
 
         # Título "Hola, nombre!"
         self.label_saludo = tk.Label(
@@ -72,14 +66,24 @@ class page_admin(page):
             "highlightcolor": "#9E2A2F"
         }
 
-        self.btn_alumno = tk.Button(self.root, text="Alumno", **estilo_boton)
+        self.btn_alumno = tk.Button(self.root, text="Alumno", command=lambda: self.abrir_busqueda('alumno', nombre_usuario), **estilo_boton)
         self.btn_alumno.pack(pady=7)
 
-        self.btn_curso = tk.Button(self.root, text="Curso", **estilo_boton)
+        self.btn_curso = tk.Button(self.root, text="Curso", command=lambda: self.abrir_busqueda('curso', nombre_usuario), **estilo_boton)
         self.btn_curso.pack(pady=7)
 
-        self.btn_material = tk.Button(self.root, text="Material", **estilo_boton)
+        self.btn_material = tk.Button(self.root, text="Material", command=lambda: self.abrir_busqueda('material', nombre_usuario), **estilo_boton)
         self.btn_material.pack(pady=7)
+
+    def volver_login(self):
+        self.root.destroy()
+        from LoginPage import LoginPage
+        LoginPage()
+
+    def abrir_busqueda(self, tipo, nombre_usuario):
+        self.root.destroy()
+        from SearchPage import SearchPage
+        SearchPage(nombre_usuario=nombre_usuario, tipo_inicial=tipo)
 
 # Solo para pruebas locales
 if __name__ == "__main__":
