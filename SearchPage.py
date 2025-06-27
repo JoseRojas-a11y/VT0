@@ -121,7 +121,7 @@ class SearchPage(page):
 
     def volver_admin(self):
         self.root.destroy()
-        from Apps.AdminPage import page_admin
+        from AdminPage import page_admin
         page_admin(nombre_usuario="Administrador")
 
 if __name__ == "__main__":

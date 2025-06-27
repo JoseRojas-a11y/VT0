@@ -56,12 +56,12 @@ class page_admin(page):
 
     def volver_login(self):
         self.root.destroy()
-        from Apps.LoginPage import LoginPage
+        from LoginPage import LoginPage
         LoginPage()
 
     def abrir_busqueda(self, tipo, nombre_usuario):
         self.root.destroy()
-        from Apps.SearchPage import SearchPage
+        from SearchPage import SearchPage
         SearchPage(nombre_usuario=nombre_usuario, tipo_inicial=tipo)
 
 # Solo para pruebas locales

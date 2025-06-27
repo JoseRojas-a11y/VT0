@@ -25,7 +25,7 @@ class ModificarPage(page):
 
     def volver_busqueda(self):
         self.root.destroy()
-        from Apps.SearchPage import SearchPage
+        from SearchPage import SearchPage
         SearchPage(nombre_usuario="Administrador", tipo_inicial=self.tipo)
 
     def crear_formulario(self):
