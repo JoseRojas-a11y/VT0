@@ -96,7 +96,7 @@ class SearchPage(page):
         else:  # notas
             query = "SELECT codigo_alumno, codigo_curso FROM notas WHERE (%s='' OR codigo_alumno=%s) AND (%s='' OR codigo_curso=%s)"
             cursor.execute(query, (codigo, codigo, codigo_curso, codigo_curso))
-        resultados = cursor.fetchall() or []
+        resultados: tuple = cursor.fetchall() # type: ignore
         for res in resultados:
             if tipo == "notas":
                 btn = tk.Button(self.frame_resultados, text=f"{res[0]}   |   {res[1]}", font=(self.tittle[3], 12), bg="#FFF8E1", fg="#9E2A2F", relief="ridge", width=32, command=lambda r=res: self.abrir_modificar_nota(r[0], r[1]))
