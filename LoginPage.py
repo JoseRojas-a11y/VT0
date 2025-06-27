@@ -59,7 +59,7 @@ class LoginPage(page):
             conn = get_db_connection()
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM usuarios WHERE username=%s AND password=%s", (username, password))
-            user = cursor.fetchone()
+            user: tuple = cursor.fetchone() # type: ignore
             if user:
                 self.root.destroy()
                 rol = user[2]  # rol
