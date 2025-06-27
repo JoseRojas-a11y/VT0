@@ -1,7 +1,7 @@
 import tkinter as tk
 from configuracion import page, get_db_connection, get_config_boton_volver
 from PIL import Image, ImageTk
-from StudentPage import page_student
+from Apps.StudentPage import page_student
 from collections import defaultdict
 import datetime
 

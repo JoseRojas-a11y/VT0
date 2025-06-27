@@ -111,17 +111,17 @@ class SearchPage(page):
     def abrir_modificar(self, codigo):
         tipo = self.tipo.get()
         self.root.destroy()
-        from ModificarPage import ModificarPage
+        from Apps.ModificarPage import ModificarPage
         ModificarPage(tipo, codigo)
 
     def abrir_modificar_nota(self, codigo_alumno, codigo_curso):
         self.root.destroy()
-        from ModificarPage import ModificarPage
+        from Apps.ModificarPage import ModificarPage
         ModificarPage("notas", (codigo_alumno, codigo_curso))
 
     def volver_admin(self):
         self.root.destroy()
-        from AdminPage import page_admin
+        from Apps.AdminPage import page_admin
         page_admin(nombre_usuario="Administrador")
 
 if __name__ == "__main__":

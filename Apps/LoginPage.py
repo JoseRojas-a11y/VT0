@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import messagebox
 from configuracion import page, get_config_entrada, get_config_boton, get_db_connection, get_config_logo
-from AdminPage import page_admin
-from StudentPage import page_student 
+from Apps.AdminPage import page_admin
+from Apps.StudentPage import page_student 
 from PIL import Image, ImageTk
 
 class LoginPage(page):

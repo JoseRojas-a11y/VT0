@@ -3,9 +3,9 @@ from configuracion import page
 from PIL import Image, ImageTk
 from configuracion import get_db_connection
 from configuracion import get_config_boton_volver
-from NotasAlumnoPage import page_nota
-from EventosAlumnoPage import page_eventos
-from MaterialesAlumnoPage import page_material
+from Apps.NotasAlumnoPage import page_nota
+from Apps.EventosAlumnoPage import page_eventos
+from Apps.MaterialesAlumnoPage import page_material
 
 class page_student(page):
     def __init__(self, nombre_usuario="Alumno", codigo_alumno=None):
@@ -85,7 +85,7 @@ class page_student(page):
 
     def cerrar_sesion(self):
         self.root.destroy()
-        from LoginPage import LoginPage
+        from Apps.LoginPage import LoginPage
         LoginPage()
 
 if __name__ == "__main__":
