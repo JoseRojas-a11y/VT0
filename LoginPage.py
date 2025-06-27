@@ -12,7 +12,7 @@ class LoginPage(page):
         self.root.configure(bg=self.background[0])
         self.root.geometry(self.background[1])
 
-        # Logo centrado
+        # Logo
         logo_cfg = get_config_logo()
         img = Image.open(logo_cfg[2])
         img = img.resize((200, 252), Image.Resampling.LANCZOS)
@@ -62,8 +62,8 @@ class LoginPage(page):
             user: tuple = cursor.fetchone() # type: ignore
             if user:
                 self.root.destroy()
-                rol = user[2]  # rol
-                codigo_alumno = user[3]  # codigo_alumno
+                rol = user[2]
+                codigo_alumno = user[3] if rol == 'alumno' else None
                 if rol == 'administrador':
                     app = page_admin(nombre_usuario=username)
                     app.root.mainloop()

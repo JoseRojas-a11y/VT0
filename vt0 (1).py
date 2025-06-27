@@ -77,12 +77,12 @@ def ventana_alumno(usuario):
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute("SELECT codigo_alumno FROM usuarios WHERE username = %s", (usuario,))
-    codigo_alumno = cursor.fetchone()
-    if not codigo_alumno:
+    codigo_alumno_row: tuple = cursor.fetchone() # type: ignore
+    if not codigo_alumno_row:
         messagebox.showerror("Error", "No se encontró el alumno para este usuario")
         conn.close()
         return
-    codigo_alumno = codigo_alumno[0]
+    codigo_alumno = codigo_alumno_row[0] # type: str
     conn.close()
 
     def mostrar_notas():
