@@ -1,7 +1,6 @@
 import tkinter as tk
-from tkinter import messagebox
 from PIL import Image, ImageTk
-from configuracion import page, get_db_connection, get_config_boton_volver
+from configuracion import page, get_config_boton_volver
 
 class page_admin(page):
     def __init__(self, nombre_usuario="nombre de usuario"):
