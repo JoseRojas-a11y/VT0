@@ -140,8 +140,7 @@ def mostrar_reportes(root):
         ("Promedio por curso", "Aquí se mostrará el promedio general de cada curso."),
         ("Cantidad de alumnos por curso", "Se mostrará cuántos estudiantes están inscritos en cada curso."),
         ("Cantidad de materiales por curso", "Visualizarás cuántos materiales tiene cada curso registrado."),
-        ("Próximos eventos por tipo", "Se listarán eventos académicos agrupados por tipo."),
-        ("Mis notas vs promedio del curso", "Compara tus calificaciones con el promedio general del curso.")
+        ("Próximos eventos por tipo", "Se listarán eventos académicos agrupados por tipo.")
     ]
 
     for texto_btn, descripcion in reportes:
