@@ -483,7 +483,7 @@ class AdminPage(page):
         self.show_modificar("alumno", codigo_alumno)
 
     def matricular_alumno_en_curso(self, codigo_alumno):
-        # Implementación básica: muestra un cuadro de diálogo para ingresar el código del curso
+        # Implementación: solicita el código del curso y matricula al alumno, creando también el registro en notas
         from tkinter.simpledialog import askstring
         cod_curso = askstring("Matricular", "Ingrese el código del curso a matricular:")
         if not cod_curso:
@@ -491,9 +491,15 @@ class AdminPage(page):
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
+            # Insertar en alumnos_cursos
             cursor.execute("INSERT INTO alumnos_cursos (codigo_alumno, codigo_curso) VALUES (%s, %s)", (codigo_alumno, cod_curso))
+            # Insertar registro vacío en notas para permitir luego actualizar
+            cursor.execute(
+                "INSERT INTO notas (codigo_alumno, codigo_curso, parcial, pc1, pc2, pc3, pc4, final, prediccion) VALUES (%s, %s, 0, 0, 0, 0, 0, 0, 0)",
+                (codigo_alumno, cod_curso)
+            )
             conn.commit()
-            messagebox.showinfo("Éxito", "Alumno matriculado en el curso.")
+            messagebox.showinfo("Éxito", "Alumno matriculado en el curso y registro de notas creado.")
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo matricular: {e}")
         cursor.close()
@@ -501,7 +507,7 @@ class AdminPage(page):
         self.show_modificar("alumno", codigo_alumno)
 
     def desmatricular_alumno_de_curso(self, codigo_alumno):
-        # Implementación básica: muestra un cuadro de diálogo para ingresar el código del curso a desmatricular
+        # Implementación: solicita el código del curso a desmatricular y elimina también el registro de notas
         from tkinter.simpledialog import askstring
         cod_curso = askstring("Desmatricular", "Ingrese el código del curso a desmatricular:")
         if not cod_curso:
@@ -509,9 +515,12 @@ class AdminPage(page):
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
+            # Eliminar de alumnos_cursos
             cursor.execute("DELETE FROM alumnos_cursos WHERE codigo_alumno=%s AND codigo_curso=%s", (codigo_alumno, cod_curso))
+            # Eliminar también el registro de notas correspondiente
+            cursor.execute("DELETE FROM notas WHERE codigo_alumno=%s AND codigo_curso=%s", (codigo_alumno, cod_curso))
             conn.commit()
-            messagebox.showinfo("Éxito", "Alumno desmatriculado del curso.")
+            messagebox.showinfo("Éxito", "Alumno desmatriculado del curso y registro de notas eliminado.")
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo desmatricular: {e}")
         cursor.close()
@@ -848,7 +857,6 @@ class StudentPage(page):
         def on_frame_configure(event):
             scroll_canvas.configure(scrollregion=scroll_canvas.bbox("all"))
         frame_eventos.bind("<Configure>", on_frame_configure)
-        
         # Empaquetar el contenedor de eventos
         eventos_container.pack(anchor="center")
 
