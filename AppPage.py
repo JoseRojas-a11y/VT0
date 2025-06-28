@@ -57,6 +57,7 @@ class AdminPage(page):
         tk.Button(self.root, text="Alumno", command=lambda: self.show_search("alumno"), **estilo_boton).pack(pady=7)
         tk.Button(self.root, text="Curso", command=lambda: self.show_search("curso"), **estilo_boton).pack(pady=7)
         tk.Button(self.root, text="Material", command=lambda: self.show_search("material"), **estilo_boton).pack(pady=7)
+        tk.Button(self.root, text="Eventos", command=lambda: self.show_search("evento"), **estilo_boton).pack(pady=7)
 
     def show_search(self, tipo):
         for widget in self.root.winfo_children():
@@ -70,48 +71,227 @@ class AdminPage(page):
         entrada_cfg = get_config_entrada()
         frame_busqueda = tk.Frame(self.root, bg=bg)
         frame_busqueda.pack(pady=5)
-        # Ajustar etiquetas y consulta para materiales
-        label_codigo_text = "Código:"
-        if tipo == "material":
-            label_codigo_text = "Código de curso:"
-        tk.Label(frame_busqueda, text=label_codigo_text, font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=0, column=0, padx=5, pady=5)
-        entry_codigo = tk.Entry(frame_busqueda, font=(entrada_cfg[3], 12))
-        entry_codigo.grid(row=0, column=1, padx=5, pady=5)
-        tk.Label(frame_busqueda, text="Nombre:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=1, column=0, padx=5, pady=5)
-        entry_nombre = tk.Entry(frame_busqueda, font=(entrada_cfg[3], 12))
-        entry_nombre.grid(row=1, column=1, padx=5, pady=5)
         boton_cfg = get_config_boton()
         btn_buscar = tk.Button(self.root, text="Buscar", bg="#FFF8E1", fg="#222", font=(boton_cfg[6], 14, "bold"), width=12, height=1)
         btn_buscar.pack(pady=10)
         frame_resultados = tk.Frame(self.root, bg=bg)
         frame_resultados.pack(pady=10, fill="both", expand=True)
 
-        def buscar():
-            for widget in frame_resultados.winfo_children():
-                widget.destroy()
-            codigo = entry_codigo.get().strip()
-            nombre = entry_nombre.get().strip()
-            conn = get_db_connection()
-            cursor = conn.cursor()
+        def abrir_formulario_agregar():
+            form = tk.Toplevel(self.root)
+            form.title(f"Agregar {tipo.capitalize()}")
+            form.transient(self.root)
+            form.grab_set()
+            form.configure(bg=bg)
+            labels = []
+            entries = []
+            campos = []
             if tipo == "alumno":
-                query = "SELECT a.codigo, a.nombre_completo FROM alumnos a WHERE (%s='' OR a.codigo=%s) AND (%s='' OR a.nombre_completo LIKE CONCAT('%',%s,'%'))"
-                cursor.execute(query, (codigo, codigo, nombre, nombre))
+                campos = [
+                    ("Código", str),
+                    ("Usuario", str),
+                    ("Nombre completo", str),
+                    ("Contraseña", str)
+                ]
             elif tipo == "curso":
-                query = "SELECT codigo, nombre FROM cursos WHERE (%s='' OR codigo=%s) AND (%s='' OR nombre LIKE CONCAT('%',%s,'%'))"
-                cursor.execute(query, (codigo, codigo, nombre, nombre))
+                campos = [
+                    ("Código", str),
+                    ("Nombre", str)
+                ]
             elif tipo == "material":
-                query = "SELECT codigo_curso, nombre FROM materiales WHERE (%s='' OR codigo_curso=%s) AND (%s='' OR nombre LIKE CONCAT('%',%s,'%'))"
-                cursor.execute(query, (codigo, codigo, nombre, nombre))
-            resultados: tuple = cursor.fetchall() # type: ignore
-            for res in resultados:
-                btn = tk.Button(frame_resultados, text=f"{res[0]}   |   {res[1]}", font=(tittle[3], 12), bg="#FFF8E1", fg="#9E2A2F", relief="ridge", width=32, command=lambda r=res: self.show_modificar(tipo, r[0]))
-                btn.pack(pady=5)
-            if not resultados:
-                tk.Label(frame_resultados, text="No se encontraron resultados.", font=(tittle[3], 12), bg=bg, fg="#9E2A2F").pack()
-            cursor.close()
-            conn.close()
-        btn_buscar.config(command=buscar)
-        buscar()  # Mostrar todos al inicio
+                campos = [
+                    ("Nombre", str),
+                    ("Enlace", str),
+                    ("Código de curso", str)
+                ]
+            elif tipo == "evento":
+                campos = [
+                    ("Tipo", str),
+                    ("Fecha (YYYY-MM-DD)", "date"),
+                    ("Hora (HH:MM)", "time"),
+                    ("Descripción", str)
+                ]
+            for i, (label, _) in enumerate(campos):
+                tk.Label(form, text=label+":", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=i, column=0, padx=8, pady=6, sticky="e")
+                entry = tk.Entry(form, font=(entrada_cfg[3], 12))
+                entry.grid(row=i, column=1, padx=8, pady=6)
+                labels.append(label)
+                entries.append(entry)
+            def validar_y_insertar():
+                valores = [e.get().strip() for e in entries]
+                # Validación de campos vacíos
+                if any(v == "" for v in valores):
+                    messagebox.showerror("Error", "Todos los campos son obligatorios.", parent=form)
+                    return
+                # Validación de tipos
+                try:
+                    if tipo == "alumno":
+                        codigo = valores[0]
+                        username = valores[1]
+                        nombre = valores[2]
+                        password = valores[3]
+                        conn = get_db_connection()
+                        cursor = conn.cursor()
+                        # Validar que el username no exista
+                        cursor.execute("SELECT 1 FROM usuarios WHERE username=%s", (username,))
+                        if cursor.fetchone():
+                            messagebox.showerror("Error", "El usuario ya existe.", parent=form)
+                            cursor.close()
+                            conn.close()
+                            return
+                        cursor.execute("INSERT INTO alumnos (codigo, nombre_completo) VALUES (%s, %s)", (codigo, nombre))
+                        cursor.execute("INSERT INTO usuarios (username, password, rol, codigo_alumno) VALUES (%s, %s, 'alumno', %s)", (username, password, codigo))
+                        conn.commit()
+                        cursor.close()
+                        conn.close()
+                    elif tipo == "curso":
+                        codigo = valores[0]
+                        nombre = valores[1]
+                        conn = get_db_connection()
+                        cursor = conn.cursor()
+                        cursor.execute("INSERT INTO cursos (codigo, nombre) VALUES (%s, %s)", (codigo, nombre))
+                        conn.commit()
+                        cursor.close()
+                        conn.close()
+                    elif tipo == "material":
+                        nombre = valores[0]
+                        enlace = valores[1]
+                        codigo_curso = valores[2]
+                        conn = get_db_connection()
+                        cursor = conn.cursor()
+                        cursor.execute("INSERT INTO materiales (nombre, enlace, codigo_curso) VALUES (%s, %s, %s)", (nombre, enlace, codigo_curso))
+                        conn.commit()
+                        cursor.close()
+                        conn.close()
+                    elif tipo == "evento":
+                        tipo_ev = valores[0]
+                        fecha = valores[1]
+                        hora = valores[2]
+                        desc = valores[3]
+                        # Validar fecha
+                        try:
+                            datetime.datetime.strptime(fecha, "%Y-%m-%d")
+                        except ValueError:
+                            messagebox.showerror("Error", "Fecha inválida. Use formato YYYY-MM-DD.", parent=form)
+                            return
+                        # Validar hora
+                        try:
+                            datetime.datetime.strptime(hora, "%H:%M")
+                        except ValueError:
+                            messagebox.showerror("Error", "Hora inválida. Use formato HH:MM.", parent=form)
+                            return
+                        conn = get_db_connection()
+                        cursor = conn.cursor()
+                        cursor.execute("INSERT INTO eventos (tipo, fecha, hora, descripcion) VALUES (%s, %s, %s, %s)", (tipo_ev, fecha, hora, desc))
+                        conn.commit()
+                        cursor.close()
+                        conn.close()
+                    else:
+                        messagebox.showerror("Error", "Tipo no soportado.", parent=form)
+                        return
+                    messagebox.showinfo("Éxito", f"{tipo.capitalize()} agregado correctamente.", parent=form)
+                    form.destroy()
+                    self.show_search(tipo)
+                except Exception as e:
+                    messagebox.showerror("Error", f"No se pudo agregar: {e}", parent=form)
+            btn_guardar = tk.Button(form, text="Guardar", bg="#C8F7C5", fg="#2E7D32", font=(tittle[3], 12, "bold"), command=validar_y_insertar)
+            btn_guardar.grid(row=len(campos), column=0, columnspan=2, pady=12)
+            form.bind('<Return>', lambda event: validar_y_insertar())
+
+        # Botón agregar para cada tipo
+        btn_agregar = tk.Button(frame_busqueda, text=f"Agregar {tipo.capitalize()}", bg="#C8F7C5", fg="#2E7D32", font=(tittle[3], 11, "bold"), command=abrir_formulario_agregar)
+        btn_agregar.grid(row=99, column=0, columnspan=2, pady=8)
+
+        # Ajustar etiquetas y consulta para materiales
+        if tipo != "evento":
+
+            label_codigo_text = "Código:"
+            if tipo == "material":
+                label_codigo_text = "Código de curso:"
+            tk.Label(frame_busqueda, text=label_codigo_text, font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=0, column=0, padx=5, pady=5)
+            entry_codigo = tk.Entry(frame_busqueda, font=(entrada_cfg[3], 12))
+            entry_codigo.grid(row=0, column=1, padx=5, pady=5)
+            entry_codigo.delete(0, tk.END)  # Limpiar campo
+            tk.Label(frame_busqueda, text="Nombre:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=1, column=0, padx=5, pady=5)
+            entry_nombre = tk.Entry(frame_busqueda, font=(entrada_cfg[3], 12))
+            entry_nombre.grid(row=1, column=1, padx=5, pady=5)
+            entry_nombre.delete(0, tk.END)  # Limpiar campo
+            
+            def buscar():
+                for widget in frame_resultados.winfo_children():
+                    widget.destroy()
+                codigo = entry_codigo.get().strip()
+                nombre = entry_nombre.get().strip()
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                if tipo == "alumno":
+                    query = "SELECT a.codigo, a.nombre_completo FROM alumnos a WHERE (%s='' OR a.codigo=%s) AND (%s='' OR a.nombre_completo LIKE CONCAT('%',%s,'%'))"
+                    cursor.execute(query, (codigo, codigo, nombre, nombre))
+                elif tipo == "curso":
+                    query = "SELECT codigo, nombre FROM cursos WHERE (%s='' OR codigo=%s) AND (%s='' OR nombre LIKE CONCAT('%',%s,'%'))"
+                    cursor.execute(query, (codigo, codigo, nombre, nombre))
+                elif tipo == "material":
+                    query = "SELECT codigo_curso, nombre, id_material FROM materiales WHERE (%s='' OR codigo_curso=%s) AND (%s='' OR nombre LIKE CONCAT('%',%s,'%'))"
+                    cursor.execute(query, (codigo, codigo, nombre, nombre))
+                elif tipo == "evento":
+                    query = "SELECT fecha, tipo, hora, descripcion FROM eventos WHERE (%s='' OR tipo=%s) AND (%s='' OR descripcion LIKE CONCAT('%',%s,'%'))"
+                    cursor.execute(query, (codigo, codigo, nombre, nombre))
+                resultados: tuple = cursor.fetchall() # type: ignore
+                for res in resultados:
+                    clave = (res[0] if tipo != "material" else res[2])  # Usar id_material para materiales
+                    btn = tk.Button(frame_resultados, text=f"  {res[0]}   |   {res[1]}", font=(tittle[3], 12), bg="#FFF8E1", fg="#9E2A2F", relief="ridge", width=32, anchor="w", command=lambda c=clave: self.show_modificar(tipo, c))
+                    btn.pack(pady=5)
+                if not resultados:
+                    tk.Label(frame_resultados, text="No se encontraron resultados.", font=(tittle[3], 12), bg=bg, fg="#9E2A2F").pack()
+                cursor.close()
+                conn.close()
+            btn_buscar.config(command=buscar)
+            buscar()  # Mostrar todos al inicio
+        else :  # Eventos
+            # Campos de búsqueda para eventos (tipo, fecha, descripción)
+            tk.Label(frame_busqueda, text="Tipo:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=0, column=0, padx=5, pady=5)
+            entry_tipo = tk.Entry(frame_busqueda, font=(entrada_cfg[3], 12))
+            entry_tipo.grid(row=0, column=1, padx=5, pady=5)
+            entry_tipo.delete(0, tk.END)
+            tk.Label(frame_busqueda, text="Fecha (YYYY-MM-DD):", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=1, column=0, padx=5, pady=5)
+            entry_fecha = tk.Entry(frame_busqueda, font=(entrada_cfg[3], 12))
+            entry_fecha.grid(row=1, column=1, padx=5, pady=5)
+            entry_fecha.delete(0, tk.END)
+            tk.Label(frame_busqueda, text="Descripción:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=2, column=0, padx=5, pady=5)
+            entry_desc = tk.Entry(frame_busqueda, font=(entrada_cfg[3], 12))
+            entry_desc.grid(row=2, column=1, padx=5, pady=5)
+            entry_desc.delete(0, tk.END)
+            
+            def buscar_evento():
+                for widget in frame_resultados.winfo_children():
+                    widget.destroy()
+                tipo_val = entry_tipo.get().strip()
+                fecha_val = entry_fecha.get().strip()
+                desc_val = entry_desc.get().strip()
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                #validar date format, de lo contrario, asignar a fecha el valor la fecha actual
+                if fecha_val:
+                    try:
+                        datetime.datetime.strptime(fecha_val, "%Y-%m-%d")
+                    except ValueError:
+                        messagebox.showerror("Error", "Formato de fecha inválido. Use YYYY-MM-DD.")
+                        return
+                else:
+                    fecha_val = datetime.datetime.now().strftime("%Y-%m-%d")
+                query = "SELECT id_evento, tipo, fecha, hora, descripcion FROM eventos WHERE ((%s='' OR tipo LIKE CONCAT('%',%s,'%')) AND (%s='' OR descripcion LIKE CONCAT('%',%s,'%'))) OR (fecha=%s OR fecha LIKE CONCAT('%',%s,'%'))"
+                cursor.execute(query, (tipo_val, tipo_val, desc_val, desc_val, fecha_val, fecha_val))
+                resultados: tuple = cursor.fetchall() # type: ignore
+                for res in resultados:
+                    clave = res[0]  # id_evento
+                    btn = tk.Button(frame_resultados, text=f"  {res[1]} | {res[2]} | {res[4][:30]}", font=(tittle[3], 12), bg="#FFF8E1", fg="#9E2A2F", relief="ridge", width=40, anchor="w", command=lambda c=clave: self.show_modificar('evento', c))
+                    btn.pack(pady=5)
+                if not resultados:
+                    tk.Label(frame_resultados, text="No se encontraron resultados.", font=(tittle[3], 12), bg=bg, fg="#9E2A2F").pack()
+                cursor.close()
+                conn.close()
+            btn_buscar.config(command=buscar_evento)
+            buscar_evento()
 
     def show_modificar(self, tipo, codigo):
         # Limpiar la ventana
@@ -149,6 +329,25 @@ class AdminPage(page):
             entry_pass.grid(row=1, column=1, pady=5)
             tk.Button(frame, text="Guardar Cambios", bg=boton_cfg[1], fg=boton_cfg[2], font=(boton_cfg[6], 12, "bold"), command=lambda: self.guardar_alumno(codigo, entry_nombre, entry_pass)).grid(row=2, column=0, columnspan=2, pady=10)
             tk.Button(frame, text="Eliminar Alumno", bg="#E57373", fg="#fff", font=(boton_cfg[6], 12, "bold"), command=lambda: self.eliminar_alumno(codigo)).grid(row=3, column=0, columnspan=2, pady=5)
+            # --- Cursos Matriculados ---
+            cursos_frame = tk.Frame(self.root, bg=bg)
+            cursos_frame.pack(pady=(10, 0))
+            tk.Label(cursos_frame, text="Cursos Matriculado", font=(tittle[3], 13, "bold"), bg=bg, fg="#9E2A2F").pack(pady=(0, 8))
+            cursor.execute("""
+                SELECT c.codigo, c.nombre FROM alumnos_cursos ac
+                JOIN cursos c ON ac.codigo_curso = c.codigo
+                WHERE ac.codigo_alumno = %s
+            """, (codigo,))
+            cursos: tuple = cursor.fetchall() # type: ignore
+            for cod_curso, nom_curso in cursos:
+                btn = tk.Button(cursos_frame, text=f"{cod_curso} - {nom_curso}", font=(tittle[3], 11), bg="#FFF8E1", fg="#9E2A2F", relief="ridge", width=32,
+                                command=lambda c=cod_curso, n=nom_curso: self.show_modificar_notas_alumno_curso(codigo, c, n))
+                btn.pack(pady=3)
+            # Botones de matriculación/desmatriculación
+            acciones_frame = tk.Frame(self.root, bg=bg)
+            acciones_frame.pack(pady=(10, 0))
+            tk.Button(acciones_frame, text="Matricular en nuevo curso", bg="#C8F7C5", fg="#2E7D32", font=(tittle[3], 11, "bold"), command=lambda: self.matricular_alumno_en_curso(codigo)).pack(side="left", padx=8)
+            tk.Button(acciones_frame, text="Desmatricular de curso", bg="#FFEFD6", fg="#E67E22", font=(tittle[3], 11, "bold"), command=lambda: self.desmatricular_alumno_de_curso(codigo)).pack(side="left", padx=8)
         elif tipo == "curso":
             cursor.execute("SELECT codigo, nombre FROM cursos WHERE codigo=%s", (codigo,))
             row = cursor.fetchone()
@@ -166,6 +365,11 @@ class AdminPage(page):
             tk.Button(frame, text="Guardar Cambios", bg=boton_cfg[1], fg=boton_cfg[2], font=(boton_cfg[6], 12, "bold"), command=lambda: self.guardar_curso(codigo, entry_codigo, entry_nombre)).grid(row=2, column=0, columnspan=2, pady=10)
             tk.Button(frame, text="Eliminar Curso", bg="#E57373", fg="#fff", font=(boton_cfg[6], 12, "bold"), command=lambda: self.eliminar_curso(codigo)).grid(row=3, column=0, columnspan=2, pady=5)
         elif tipo == "material":
+            try:
+                codigo = int(codigo)
+            except ValueError:
+                messagebox.showerror("Error", "ID de material inválido.")
+                return
             cursor.execute("SELECT id_material, nombre, enlace, codigo_curso FROM materiales WHERE id_material=%s", (codigo,))
             row = cursor.fetchone()
             if not row:
@@ -185,8 +389,134 @@ class AdminPage(page):
             entry_codigo_curso.grid(row=2, column=1, pady=5)
             tk.Button(frame, text="Guardar Cambios", bg=boton_cfg[1], fg=boton_cfg[2], font=(boton_cfg[6], 12, "bold"), command=lambda: self.guardar_material(codigo, entry_nombre, entry_enlace, entry_codigo_curso)).grid(row=3, column=0, columnspan=2, pady=10)
             tk.Button(frame, text="Eliminar Material", bg="#E57373", fg="#fff", font=(boton_cfg[6], 12, "bold"), command=lambda: self.eliminar_material(codigo)).grid(row=4, column=0, columnspan=2, pady=5)
+        elif tipo == "evento":
+            try:
+                codigo = int(codigo)
+            except ValueError:
+                messagebox.showerror("Error", "ID de evento inválido.")
+                return
+            cursor.execute("SELECT id_evento, tipo, fecha, hora, descripcion FROM eventos WHERE id_evento=%s", (codigo,))
+            row = cursor.fetchone()
+            if not row:
+                messagebox.showerror("Error", "Evento no encontrado.")
+                return
+            tk.Label(frame, text="Tipo:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=0, column=0, sticky="e", pady=5)
+            entry_tipo = tk.Entry(frame, font=(entrada_cfg[3], 12))
+            entry_tipo.insert(0, str(row[1]))
+            entry_tipo.grid(row=0, column=1, pady=5)
+            tk.Label(frame, text="Fecha (YYYY-MM-DD):", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=1, column=0, sticky="e", pady=5)
+            entry_fecha = tk.Entry(frame, font=(entrada_cfg[3], 12))
+            entry_fecha.insert(0, str(row[2]))
+            entry_fecha.grid(row=1, column=1, pady=5)
+            tk.Label(frame, text="Hora (HH:MM):", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=2, column=0, sticky="e", pady=5)
+            entry_hora = tk.Entry(frame, font=(entrada_cfg[3], 12))
+            entry_hora.insert(0, str(row[3]))
+            entry_hora.grid(row=2, column=1, pady=5)
+            tk.Label(frame, text="Descripción:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=3, column=0, sticky="e", pady=5)
+            entry_desc = tk.Entry(frame, font=(entrada_cfg[3], 12))
+            entry_desc.insert(0, str(row[4]))
+            entry_desc.grid(row=3, column=1, pady=5)
+            tk.Button(frame, text="Guardar Cambios", bg=boton_cfg[1], fg=boton_cfg[2], font=(boton_cfg[6], 12, "bold"), command=lambda: self.guardar_evento(codigo, entry_tipo, entry_fecha, entry_hora, entry_desc)).grid(row=4, column=0, columnspan=2, pady=10)
+            tk.Button(frame, text="Eliminar Evento", bg="#E57373", fg="#fff", font=(boton_cfg[6], 12, "bold"), command=lambda: self.eliminar_evento(codigo)).grid(row=5, column=0, columnspan=2, pady=5)
         cursor.close()
         conn.close()
+
+    def show_modificar_notas_alumno_curso(self, codigo_alumno, codigo_curso, nombre_curso):
+        """
+        Página para modificar las notas de un alumno en un curso específico.
+        """
+        self.clear_window()
+        bg, size = get_config_fondo()
+        tittle = get_config_titulo()
+        render_header(self.root, self.nombre_usuario)
+        tk.Button(self.root, text="Volver", bg="#FFF8E1", fg="#222", font=(tittle[3], 10, "bold"), relief="raised", command=lambda: self.show_modificar("alumno", codigo_alumno)).pack(anchor="nw", padx=15, pady=(5, 0))
+        content = tk.Frame(self.root, bg=bg)
+        content.pack(pady=20)
+        tk.Label(content, text=f"Notas de {nombre_curso}", font=(tittle[3], 14, "bold"), bg=bg, fg="#9E2A2F").pack(pady=(0, 10))
+        # Obtener notas
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT pc1, pc2, pc3, pc4, parcial, final
+            FROM notas
+            WHERE codigo_alumno = %s AND codigo_curso = %s
+        """, (codigo_alumno, codigo_curso))
+        row = cursor.fetchone()
+        # Campos de notas
+        labels = ["PC1", "PC2", "PC3", "PC4", "Parcial", "Final"]
+        entries = []
+        for i, label in enumerate(labels):
+            fila = tk.Frame(content, bg=bg)
+            fila.pack(fill="x", pady=2)
+            tk.Label(fila, text=label+":", font=(tittle[3], 11), bg="#FFF9C4", fg="black", width=12, anchor="e").pack(side="left", padx=6)
+            entry = tk.Entry(fila, font=(tittle[3], 11), width=16)
+            entry.pack(side="left", padx=6)
+            if row and row[i] is not None:
+                entry.insert(0, str(row[i]))
+            entries.append(entry)
+        cursor.close()
+        conn.close()
+        # Botón guardar
+        tk.Button(content, text="Guardar cambios", bg="#C8F7C5", fg="#2E7D32", font=(tittle[3], 11, "bold"), command=lambda: self.guardar_notas_alumno_curso(codigo_alumno, codigo_curso, entries)).pack(pady=12)
+
+    def guardar_notas_alumno_curso(self, codigo_alumno, codigo_curso, entries):
+        valores = [e.get() for e in entries]
+        # Validar que todas las entradas sean numéricas caso contrario igualarlas a 0
+        for i in range(len(valores)):
+            try:
+                valores[i] = float(valores[i])
+            except ValueError:
+                valores[i] = 0.0
+
+        prediccion = round(((sum(valores[:4]) - min(valores[:4])) / 3 + valores[4] + valores[5]) / 3, 2)
+        valores.append(prediccion)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE notas SET pc1=%s, pc2=%s, pc3=%s, pc4=%s, parcial=%s, final=%s, prediccion=%s
+            WHERE codigo_alumno=%s AND codigo_curso=%s
+        """, (*valores, codigo_alumno, codigo_curso))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        messagebox.showinfo("Éxito", "Notas actualizadas correctamente.")
+        self.show_modificar("alumno", codigo_alumno)
+
+    def matricular_alumno_en_curso(self, codigo_alumno):
+        # Implementación básica: muestra un cuadro de diálogo para ingresar el código del curso
+        from tkinter.simpledialog import askstring
+        cod_curso = askstring("Matricular", "Ingrese el código del curso a matricular:")
+        if not cod_curso:
+            return
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("INSERT INTO alumnos_cursos (codigo_alumno, codigo_curso) VALUES (%s, %s)", (codigo_alumno, cod_curso))
+            conn.commit()
+            messagebox.showinfo("Éxito", "Alumno matriculado en el curso.")
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo matricular: {e}")
+        cursor.close()
+        conn.close()
+        self.show_modificar("alumno", codigo_alumno)
+
+    def desmatricular_alumno_de_curso(self, codigo_alumno):
+        # Implementación básica: muestra un cuadro de diálogo para ingresar el código del curso a desmatricular
+        from tkinter.simpledialog import askstring
+        cod_curso = askstring("Desmatricular", "Ingrese el código del curso a desmatricular:")
+        if not cod_curso:
+            return
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("DELETE FROM alumnos_cursos WHERE codigo_alumno=%s AND codigo_curso=%s", (codigo_alumno, cod_curso))
+            conn.commit()
+            messagebox.showinfo("Éxito", "Alumno desmatriculado del curso.")
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo desmatricular: {e}")
+        cursor.close()
+        conn.close()
+        self.show_modificar("alumno", codigo_alumno)
 
     def guardar_alumno(self, codigo, entry_nombre, entry_pass):
         conn = get_db_connection()
@@ -250,6 +580,28 @@ class AdminPage(page):
             messagebox.showinfo("Eliminado", "Material eliminado correctamente.")
             self.show_search("material")
 
+    def guardar_evento(self, codigo, entry_tipo, entry_fecha, entry_hora, entry_desc):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE eventos SET tipo=%s, fecha=%s, hora=%s, descripcion=%s WHERE id_evento=%s",
+            (entry_tipo.get().strip(), entry_fecha.get().strip(), entry_hora.get().strip(), entry_desc.get().strip(), codigo))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        messagebox.showinfo("Éxito", "Datos de evento actualizados.")
+        self.show_search("evento")
+
+    def eliminar_evento(self, codigo):
+        if messagebox.askyesno("Confirmar", "¿Seguro que desea eliminar este evento? Esta acción no se puede deshacer."):
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM eventos WHERE id_evento=%s", (codigo,))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            messagebox.showinfo("Eliminado", "Evento eliminado correctamente.")
+            self.show_search("evento")
+
     def add_logout_button(self):
         """
         Adds a styled 'Cerrar sesión' button at the top-left below the header.
@@ -279,7 +631,7 @@ class StudentPage(page):
         bg, _ = get_config_fondo()
         tittle = get_config_titulo()
         nav_frame = tk.Frame(self.root, bg=bg)
-        nav_frame.pack(side="bottom", fill="x", pady=10)
+        nav_frame.pack(side="bottom", fill="x", anchor="center", pady=10)
         btn_nav_style = {"width": 10, "height": 2, "bg": "#FFF8E1", "fg": "#222", "font": (tittle[3], 10, "bold"), "relief": "raised"}
         tk.Button(nav_frame, text="Inicio", command=self.show_student, **btn_nav_style).pack(side="left", padx=5)
         tk.Button(nav_frame, text="Notas", command=self.show_notas, **btn_nav_style).pack(side="left", padx=5)
@@ -348,7 +700,7 @@ class StudentPage(page):
         noticia_style = {"bg": "#FFF9C4", "bd": 2, "relief": "groove", "padx": 16, "pady": 12}
         left_news = tk.Frame(noticias_frame, **noticia_style)
         left_news.pack(fill="x", padx=10, pady=(0, 8))
-        tk.Label(left_news, text="Nota reciente", font=(tittle[3], 12, "bold"), bg="#FFF9C4").pack(anchor="w")
+        tk.Label(left_news, text="Próximo examen", font=(tittle[3], 12, "bold"), bg="#FFF9C4").pack(anchor="w")
         tk.Label(left_news, text=examen_info, font=(tittle[3], 12), bg="#FFF9C4").pack(anchor="w", pady=(4,0))
         right_news = tk.Frame(noticias_frame, **noticia_style)
         right_news.pack(fill="x", padx=10)
@@ -367,40 +719,87 @@ class StudentPage(page):
         self.add_logout_button()
         content = tk.Frame(self.root, bg=bg)
         content.pack(expand=True)
-        tk.Label(content, text="Notas", font=(tittle[3], tittle[1], "bold"), bg=bg, fg=tittle[2]).pack(pady=(30, 10))
+        tk.Label(content, text="Selecciona un curso", font=(tittle[3], tittle[1], "bold"), bg=bg, fg=tittle[2]).pack(pady=(30, 10))
         img = Image.open(logo_cfg[2])
         img = img.resize((100, 125), Image.Resampling.LANCZOS)
         self.logo_img_notas = ImageTk.PhotoImage(img)
         tk.Label(content, image=self.logo_img_notas, bg=logo_cfg[1]).pack(pady=10)
-        frame_tabla = tk.Frame(content, bg=bg)
-        frame_tabla.pack(pady=10)
-        headers = ["Curso", "Parcial", "PC1", "PC2", "PC3", "PC4", "Final", "Predicción"]
-        for j, h in enumerate(headers):
-            tk.Label(frame_tabla, text=h, font=(tittle[3], 10, "bold"), bg=bg, fg="#FFF8E1", padx=8, pady=4, borderwidth=1, relief="solid").grid(row=0, column=j, sticky="nsew")
-        if self.codigo_alumno:
-            try:
-                conn = get_db_connection()
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT c.nombre, n.parcial, n.pc1, n.pc2, n.pc3, n.pc4, n.final, n.prediccion
-                    FROM notas n
-                    JOIN cursos c ON n.codigo_curso = c.codigo
-                    WHERE n.codigo_alumno = %s
-                """, (self.codigo_alumno,))
-                notas: tuple = cursor.fetchall() # type: ignore
-                cursor.close()
-                conn.close()
-                for i, fila in enumerate(notas, start=1):
-                    for j, dato in enumerate(fila):
-                        tk.Label(frame_tabla, text=str(dato), font=(tittle[3], 10), bg=bg, fg="#FFF8E1", padx=8, pady=4, borderwidth=1, relief="solid").grid(row=i, column=j, sticky="nsew")
-                if not notas:
-                    tk.Label(frame_tabla, text="No hay notas registradas.", font=(tittle[3], 12), bg=bg, fg="#FFF8E1").grid(row=1, column=0, columnspan=len(headers))
-            except Exception as e:
-                tk.Label(frame_tabla, text=f"Error al obtener notas: {e}", font=(tittle[3], 12), bg=bg, fg="#FFF8E1").grid(row=1, column=0, columnspan=len(headers))
-        else:
-            tk.Label(frame_tabla, text="No se proporcionó código de alumno.", font=(tittle[3], 12), bg=bg, fg="#FFF8E1").grid(row=1, column=0, columnspan=len(headers))
+        # Listar cursos del alumno
+        cursos_frame = tk.Frame(content, bg=bg)
+        cursos_frame.pack(pady=10)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT c.codigo, c.nombre
+            FROM alumnos_cursos ac
+            JOIN cursos c ON ac.codigo_curso = c.codigo
+            WHERE ac.codigo_alumno = %s
+        """, (self.codigo_alumno,))
+        cursos = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        if not cursos:
+            tk.Label(cursos_frame, text="No tienes cursos asignados.", font=(tittle[3], 12), bg=bg, fg="#FFF8E1").pack()
+            return
+        for cod, nom in cursos:
+            btn = tk.Button(cursos_frame, text=f"{nom}", font=(tittle[3], 12), bg="#FFF8E1", fg="#9E2A2F", relief="ridge", width=32, anchor="w", command=lambda c=cod, n=nom: self.show_detalle_notas_curso(c, n))
+            btn.pack(pady=5)
         self.add_navbar()
 
+    def show_detalle_notas_curso(self, codigo_curso, nombre_curso):
+        self.clear_window()
+        bg, size = get_config_fondo()
+        tittle = get_config_titulo()
+        render_header(self.root, self.nombre_usuario)
+        self.add_logout_button()
+        content = tk.Frame(self.root, bg=bg)
+        content.pack(expand=True)
+        tk.Label(content, text=nombre_curso, font=(tittle[3], tittle[1], "bold"), bg=bg, fg=tittle[2]).pack(pady=(30, 10))
+        # Tabla de notas con bordes negros
+        tabla = tk.Frame(content, bg=bg)
+        tabla.pack(pady=10)
+        headers = ["EXAMEN", "NOTA"]
+        for j, h in enumerate(headers):
+            tk.Label(tabla, text=h, font=(tittle[3], 12, "bold"), bg="#FFEFD6", fg="black", padx=12, pady=6, borderwidth=1, relief="solid", highlightbackground="black", highlightthickness=1).grid(row=0, column=j, sticky="nsew")
+        # Obtener notas
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT parcial, pc1, pc2, pc3, pc4, final, prediccion
+            FROM notas
+            WHERE codigo_alumno = %s AND codigo_curso = %s
+        """, (self.codigo_alumno, codigo_curso))
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        examenes = [
+            ("PRACTICA 1 (N1)", row[1] if row else None),
+            ("PRACTICA 2 (N2)", row[2] if row else None),
+            ("PRACTICA 3 (N3)", row[3] if row else None),
+            ("PRACTICA 4 (N4)", row[4] if row else None),
+            ("EXAMEN PARCIAL (EP)", row[0] if row else None),
+            ("EXAMEN FINAL (EF)", row[5] if row else None),
+            ("EXAMEN SUSTITUTORIO (ES)", row[6] if row else None),
+        ]
+        for i, (nombre, nota) in enumerate(examenes, start=1):
+            tk.Label(tabla, text=nombre, font=(tittle[3], 11), bg="#FFEFD6", fg="#555", padx=8, pady=6, borderwidth=1, relief="solid", highlightbackground="black", highlightthickness=1).grid(row=i, column=0, sticky="nsew")
+            if nota is not None and nota != "":
+                nota_lbl = tk.Label(tabla, text=str(int(nota)), font=(tittle[3], 11, "bold"), bg="#C8F7C5", fg="#2E7D32", padx=16, pady=4, borderwidth=1, relief="solid", highlightbackground="black", highlightthickness=1)
+            else:
+                nota_lbl = tk.Label(tabla, text="--", font=(tittle[3], 11, "bold"), bg="#FFEFD6", fg="#E67E22", padx=16, pady=4, borderwidth=1, relief="solid", highlightbackground="black", highlightthickness=1)
+            nota_lbl.grid(row=i, column=1, sticky="nsew")
+        # Sección de nota predicción
+        prediccion = row[6] if row and row[6] is not None else None
+        resumen_frame = tk.Frame(content, bg="#FFF8E1", bd=2, relief="ridge", highlightbackground="#9E2A2F", highlightthickness=2)
+        resumen_frame.pack(pady=(10, 0))
+        if prediccion is not None:
+            tk.Label(resumen_frame, text=f"Predicción de nota final: {prediccion}", font=(tittle[3], 13, "bold"), bg="#FFF8E1", fg="black", pady=8).pack()
+        else:
+            tk.Label(resumen_frame, text="No hay predicción disponible.", font=(tittle[3], 12), bg="#FFF8E1", fg="#E67E22", pady=8).pack()
+        # Botón volver
+        tk.Button(content, text="Volver", bg="#FFF8E1", fg="black", font=(tittle[3], 10, "bold"), relief="raised", command=self.show_notas).pack(pady=20)
+        self.add_navbar()
+    
     def show_eventos(self):
         self.clear_window()
         bg, size = get_config_fondo()
