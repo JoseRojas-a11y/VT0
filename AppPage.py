@@ -630,8 +630,12 @@ class StudentPage(page):
     def add_navbar(self):
         bg, _ = get_config_fondo()
         tittle = get_config_titulo()
-        nav_frame = tk.Frame(self.root, bg=bg)
-        nav_frame.pack(side="bottom", fill="x", anchor="center", pady=10)
+        # Contenedor externo para centrar la barra
+        navbar_outer = tk.Frame(self.root, bg=bg)
+        navbar_outer.pack(side="bottom", fill="x", pady=10)
+        # Frame interno centrado
+        nav_frame = tk.Frame(navbar_outer, bg=bg)
+        nav_frame.pack(anchor="center")
         btn_nav_style = {"width": 10, "height": 2, "bg": "#FFF8E1", "fg": "#222", "font": (tittle[3], 10, "bold"), "relief": "raised"}
         tk.Button(nav_frame, text="Inicio", command=self.show_student, **btn_nav_style).pack(side="left", padx=5)
         tk.Button(nav_frame, text="Notas", command=self.show_notas, **btn_nav_style).pack(side="left", padx=5)
@@ -845,8 +849,7 @@ class StudentPage(page):
         def on_frame_configure(event):
             scroll_canvas.configure(scrollregion=scroll_canvas.bbox("all"))
         frame_eventos.bind("<Configure>", on_frame_configure)
-
-        # Centrar el contenedor de eventos
+        # Empaquetar el contenedor de eventos
         eventos_container.pack(anchor="center")
 
         try:
