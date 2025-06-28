@@ -783,7 +783,6 @@ class StudentPage(page):
             ("PRACTICA 4 (N4)", row[4] if row else None),
             ("EXAMEN PARCIAL (EP)", row[0] if row else None),
             ("EXAMEN FINAL (EF)", row[5] if row else None),
-            ("EXAMEN SUSTITUTORIO (ES)", row[6] if row else None),
         ]
         for i, (nombre, nota) in enumerate(examenes, start=1):
             tk.Label(tabla, text=nombre, font=(tittle[3], 11), bg="#FFEFD6", fg="#555", padx=8, pady=6, borderwidth=1, relief="solid", highlightbackground="black", highlightthickness=1).grid(row=i, column=0, sticky="nsew")
@@ -849,6 +848,7 @@ class StudentPage(page):
         def on_frame_configure(event):
             scroll_canvas.configure(scrollregion=scroll_canvas.bbox("all"))
         frame_eventos.bind("<Configure>", on_frame_configure)
+        
         # Empaquetar el contenedor de eventos
         eventos_container.pack(anchor="center")
 
