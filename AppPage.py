@@ -1,10 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
-from collections import defaultdict
 import datetime
-import webbrowser
-import sys
 from configuracion import (
     get_db_connection, get_config_logo, get_config_entrada, get_config_boton,
     get_config_boton_volver, get_config_fondo, get_config_titulo, render_header, page
@@ -26,11 +23,7 @@ class AdminPage(page):
         boton_volver_cfg = get_config_boton_volver()
 
         render_header(self.root, self.nombre_usuario)
-        tk.Button(
-            self.root, text="Cerrar sesión", command=self.on_logout,
-            bg=boton_volver_cfg["bg"], fg=boton_volver_cfg["fg"],
-            font=boton_volver_cfg["font"], relief=boton_volver_cfg["relief"]
-        ).pack(anchor=boton_volver_cfg["anchor"], padx=boton_volver_cfg["padx"], pady=boton_volver_cfg["pady"])
+        self.add_logout_button()
 
         label_titulo = tk.Label(
             self.root,
@@ -40,7 +33,7 @@ class AdminPage(page):
         )
         label_titulo.pack(pady=(30, 10))
 
-        img = Image.open(logo_cfg[2]).resize((120, 120), Image.Resampling.LANCZOS)
+        img = Image.open(logo_cfg[2]).resize((100, 125), Image.Resampling.LANCZOS)
         self.logo_img_admin = ImageTk.PhotoImage(img)
         logo_label = tk.Label(self.root, image=self.logo_img_admin, bg=logo_cfg[1])
         logo_label.pack(pady=10)
@@ -71,19 +64,24 @@ class AdminPage(page):
         bg, size = get_config_fondo()
         tittle = get_config_titulo()
         render_header(self.root, self.nombre_usuario)
-        tk.Button(self.root, text="Volver", bg="#B3C6E7", fg="#222", font=(tittle[3], 10, "bold"), relief="raised", command=self.show_admin).pack(anchor="nw", padx=15, pady=(5, 0))
+        self.add_logout_button()
+        tk.Button(self.root, text="Volver", bg="#FFF8E1", fg="#222", font=(tittle[3], 10, "bold"), relief="raised", command=self.show_admin).pack(anchor="nw", padx=15, pady=(5, 0))
         tk.Label(self.root, text=f"Buscar {tipo.capitalize()}", font=(tittle[3], 16, "bold"), bg=bg, fg="#9E2A2F").pack(pady=(20, 10))
         entrada_cfg = get_config_entrada()
         frame_busqueda = tk.Frame(self.root, bg=bg)
         frame_busqueda.pack(pady=5)
-        tk.Label(frame_busqueda, text="Código:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=0, column=0, padx=5, pady=5)
+        # Ajustar etiquetas y consulta para materiales
+        label_codigo_text = "Código:"
+        if tipo == "material":
+            label_codigo_text = "Código de curso:"
+        tk.Label(frame_busqueda, text=label_codigo_text, font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=0, column=0, padx=5, pady=5)
         entry_codigo = tk.Entry(frame_busqueda, font=(entrada_cfg[3], 12))
         entry_codigo.grid(row=0, column=1, padx=5, pady=5)
         tk.Label(frame_busqueda, text="Nombre:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=1, column=0, padx=5, pady=5)
         entry_nombre = tk.Entry(frame_busqueda, font=(entrada_cfg[3], 12))
         entry_nombre.grid(row=1, column=1, padx=5, pady=5)
         boton_cfg = get_config_boton()
-        btn_buscar = tk.Button(self.root, text="Buscar", bg="#B3C6E7", fg="#222", font=(boton_cfg[6], 14, "bold"), width=12, height=1)
+        btn_buscar = tk.Button(self.root, text="Buscar", bg="#FFF8E1", fg="#222", font=(boton_cfg[6], 14, "bold"), width=12, height=1)
         btn_buscar.pack(pady=10)
         frame_resultados = tk.Frame(self.root, bg=bg)
         frame_resultados.pack(pady=10, fill="both", expand=True)
@@ -101,8 +99,8 @@ class AdminPage(page):
             elif tipo == "curso":
                 query = "SELECT codigo, nombre FROM cursos WHERE (%s='' OR codigo=%s) AND (%s='' OR nombre LIKE CONCAT('%',%s,'%'))"
                 cursor.execute(query, (codigo, codigo, nombre, nombre))
-            else:
-                query = "SELECT id_material, nombre FROM materiales WHERE (%s='' OR id_material=%s) AND (%s='' OR nombre LIKE CONCAT('%',%s,'%'))"
+            elif tipo == "material":
+                query = "SELECT codigo_curso, nombre FROM materiales WHERE (%s='' OR codigo_curso=%s) AND (%s='' OR nombre LIKE CONCAT('%',%s,'%'))"
                 cursor.execute(query, (codigo, codigo, nombre, nombre))
             resultados: tuple = cursor.fetchall() # type: ignore
             for res in resultados:
@@ -116,10 +114,158 @@ class AdminPage(page):
         buscar()  # Mostrar todos al inicio
 
     def show_modificar(self, tipo, codigo):
+        # Limpiar la ventana
         for widget in self.root.winfo_children():
             widget.destroy()
-        from ModificarPage import ModificarPage
-        ModificarPage(tipo, codigo, nombre_usuario=self.nombre_usuario)
+        from configuracion import get_config_entrada, get_config_boton, get_db_connection, render_header, get_config_fondo
+        bg, size = get_config_fondo()
+        tittle = get_config_titulo()
+        render_header(self.root, self.nombre_usuario)
+        # Botón Volver
+        tk.Button(
+            self.root, text="Volver", bg="#FFF8E1", fg="#222",
+            font=(tittle[3], 10, "bold"), relief="raised",
+            command=lambda: self.show_search(tipo)
+        ).pack(anchor="nw", padx=15, pady=(5, 0))
+        frame = tk.Frame(self.root, bg=bg)
+        frame.pack(pady=20)
+        entrada_cfg = get_config_entrada()
+        boton_cfg = get_config_boton()
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        if tipo == "alumno":
+            cursor.execute("SELECT a.codigo, a.nombre_completo, u.password FROM alumnos a JOIN usuarios u ON a.codigo=u.codigo_alumno WHERE a.codigo=%s", (codigo,))
+            row = cursor.fetchone()
+            if not row:
+                messagebox.showerror("Error", "Alumno no encontrado.")
+                return
+            tk.Label(frame, text="Nombre:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=0, column=0, sticky="e", pady=5)
+            entry_nombre = tk.Entry(frame, font=(entrada_cfg[3], 12))
+            entry_nombre.insert(0, str(row[1]))
+            entry_nombre.grid(row=0, column=1, pady=5)
+            tk.Label(frame, text="Contraseña:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=1, column=0, sticky="e", pady=5)
+            entry_pass = tk.Entry(frame, font=(entrada_cfg[3], 12))
+            entry_pass.insert(0, str(row[2]))
+            entry_pass.grid(row=1, column=1, pady=5)
+            tk.Button(frame, text="Guardar Cambios", bg=boton_cfg[1], fg=boton_cfg[2], font=(boton_cfg[6], 12, "bold"), command=lambda: self.guardar_alumno(codigo, entry_nombre, entry_pass)).grid(row=2, column=0, columnspan=2, pady=10)
+            tk.Button(frame, text="Eliminar Alumno", bg="#E57373", fg="#fff", font=(boton_cfg[6], 12, "bold"), command=lambda: self.eliminar_alumno(codigo)).grid(row=3, column=0, columnspan=2, pady=5)
+        elif tipo == "curso":
+            cursor.execute("SELECT codigo, nombre FROM cursos WHERE codigo=%s", (codigo,))
+            row = cursor.fetchone()
+            if not row:
+                messagebox.showerror("Error", "Curso no encontrado.")
+                return
+            tk.Label(frame, text="Código:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=0, column=0, sticky="e", pady=5)
+            entry_codigo = tk.Entry(frame, font=(entrada_cfg[3], 12))
+            entry_codigo.insert(0, str(row[0]))
+            entry_codigo.grid(row=0, column=1, pady=5)
+            tk.Label(frame, text="Nombre:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=1, column=0, sticky="e", pady=5)
+            entry_nombre = tk.Entry(frame, font=(entrada_cfg[3], 12))
+            entry_nombre.insert(0, str(row[1]))
+            entry_nombre.grid(row=1, column=1, pady=5)
+            tk.Button(frame, text="Guardar Cambios", bg=boton_cfg[1], fg=boton_cfg[2], font=(boton_cfg[6], 12, "bold"), command=lambda: self.guardar_curso(codigo, entry_codigo, entry_nombre)).grid(row=2, column=0, columnspan=2, pady=10)
+            tk.Button(frame, text="Eliminar Curso", bg="#E57373", fg="#fff", font=(boton_cfg[6], 12, "bold"), command=lambda: self.eliminar_curso(codigo)).grid(row=3, column=0, columnspan=2, pady=5)
+        elif tipo == "material":
+            cursor.execute("SELECT id_material, nombre, enlace, codigo_curso FROM materiales WHERE id_material=%s", (codigo,))
+            row = cursor.fetchone()
+            if not row:
+                messagebox.showerror("Error", "Material no encontrado.")
+                return
+            tk.Label(frame, text="Nombre:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=0, column=0, sticky="e", pady=5)
+            entry_nombre = tk.Entry(frame, font=(entrada_cfg[3], 12))
+            entry_nombre.insert(0, str(row[1]))
+            entry_nombre.grid(row=0, column=1, pady=5)
+            tk.Label(frame, text="Enlace:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=1, column=0, sticky="e", pady=5)
+            entry_enlace = tk.Entry(frame, font=(entrada_cfg[3], 12))
+            entry_enlace.insert(0, str(row[2]))
+            entry_enlace.grid(row=1, column=1, pady=5)
+            tk.Label(frame, text="Código Curso:", font=(entrada_cfg[3], entrada_cfg[1]), bg=bg, fg=entrada_cfg[2]).grid(row=2, column=0, sticky="e", pady=5)
+            entry_codigo_curso = tk.Entry(frame, font=(entrada_cfg[3], 12))
+            entry_codigo_curso.insert(0, str(row[3]))
+            entry_codigo_curso.grid(row=2, column=1, pady=5)
+            tk.Button(frame, text="Guardar Cambios", bg=boton_cfg[1], fg=boton_cfg[2], font=(boton_cfg[6], 12, "bold"), command=lambda: self.guardar_material(codigo, entry_nombre, entry_enlace, entry_codigo_curso)).grid(row=3, column=0, columnspan=2, pady=10)
+            tk.Button(frame, text="Eliminar Material", bg="#E57373", fg="#fff", font=(boton_cfg[6], 12, "bold"), command=lambda: self.eliminar_material(codigo)).grid(row=4, column=0, columnspan=2, pady=5)
+        cursor.close()
+        conn.close()
+
+    def guardar_alumno(self, codigo, entry_nombre, entry_pass):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE alumnos SET nombre_completo=%s WHERE codigo=%s", (entry_nombre.get().strip(), codigo))
+        cursor.execute("UPDATE usuarios SET password=%s WHERE codigo_alumno=%s", (entry_pass.get().strip(), codigo))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        messagebox.showinfo("Éxito", "Datos de alumno actualizados.")
+
+    def eliminar_alumno(self, codigo):
+        if messagebox.askyesno("Confirmar", "¿Seguro que desea eliminar este alumno? Esta acción no se puede deshacer."):
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM usuarios WHERE codigo_alumno=%s", (codigo,))
+            cursor.execute("DELETE FROM alumnos WHERE codigo=%s", (codigo,))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            messagebox.showinfo("Eliminado", "Alumno eliminado correctamente.")
+            self.show_search("alumno")
+
+    def guardar_curso(self, codigo, entry_codigo, entry_nombre):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE cursos SET codigo=%s, nombre=%s WHERE codigo=%s", (entry_codigo.get().strip(), entry_nombre.get().strip(), codigo))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        messagebox.showinfo("Éxito", "Datos de curso actualizados.")
+
+    def eliminar_curso(self, codigo):
+        if messagebox.askyesno("Confirmar", "¿Seguro que desea eliminar este curso? Esta acción no se puede deshacer."):
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM cursos WHERE codigo=%s", (codigo,))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            messagebox.showinfo("Eliminado", "Curso eliminado correctamente.")
+            self.show_search("curso")
+
+    def guardar_material(self, codigo, entry_nombre, entry_enlace, entry_codigo_curso):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE materiales SET nombre=%s, enlace=%s, codigo_curso=%s WHERE id_material=%s", (entry_nombre.get().strip(), entry_enlace.get().strip(), entry_codigo_curso.get().strip(), codigo))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        messagebox.showinfo("Éxito", "Datos de material actualizados.")
+
+    def eliminar_material(self, codigo):
+        if messagebox.askyesno("Confirmar", "¿Seguro que desea eliminar este material? Esta acción no se puede deshacer."):
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM materiales WHERE id_material=%s", (codigo,))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            messagebox.showinfo("Eliminado", "Material eliminado correctamente.")
+            self.show_search("material")
+
+    def add_logout_button(self):
+        """
+        Adds a styled 'Cerrar sesión' button at the top-left below the header.
+        Should be called after render_header in each page.
+        """
+        boton_volver_cfg = get_config_boton_volver()
+        btn = tk.Button(
+            self.root,
+            text="Cerrar sesión",
+            command=self.on_logout,
+            bg=boton_volver_cfg["bg"],
+            fg=boton_volver_cfg["fg"],
+            font=boton_volver_cfg["font"],
+            relief=boton_volver_cfg["relief"]
+        )
+        btn.pack(anchor=boton_volver_cfg["anchor"], padx=boton_volver_cfg["padx"], pady=boton_volver_cfg["pady"])
 
 class StudentPage(page):
     def __init__(self, root, nombre_usuario, codigo_alumno, on_logout):
@@ -134,7 +280,7 @@ class StudentPage(page):
         tittle = get_config_titulo()
         nav_frame = tk.Frame(self.root, bg=bg)
         nav_frame.pack(side="bottom", fill="x", pady=10)
-        btn_nav_style = {"width": 10, "height": 2, "bg": "#F7D4AF", "fg": "#222", "font": (tittle[3], 10, "bold"), "relief": "raised"}
+        btn_nav_style = {"width": 10, "height": 2, "bg": "#FFF8E1", "fg": "#222", "font": (tittle[3], 10, "bold"), "relief": "raised"}
         tk.Button(nav_frame, text="Inicio", command=self.show_student, **btn_nav_style).pack(side="left", padx=5)
         tk.Button(nav_frame, text="Notas", command=self.show_notas, **btn_nav_style).pack(side="left", padx=5)
         tk.Button(nav_frame, text="Eventos", command=self.show_eventos, **btn_nav_style).pack(side="left", padx=5)
@@ -146,6 +292,7 @@ class StudentPage(page):
         tittle = get_config_titulo()
         logo_cfg = get_config_logo()
         render_header(self.root, self.nombre_usuario)
+        self.add_logout_button()
         # Frame centrado
         content = tk.Frame(self.root, bg=bg)
         content.pack(expand=True)
@@ -217,6 +364,7 @@ class StudentPage(page):
         tittle = get_config_titulo()
         logo_cfg = get_config_logo()
         render_header(self.root, self.nombre_usuario)
+        self.add_logout_button()
         content = tk.Frame(self.root, bg=bg)
         content.pack(expand=True)
         tk.Label(content, text="Notas", font=(tittle[3], tittle[1], "bold"), bg=bg, fg=tittle[2]).pack(pady=(30, 10))
@@ -259,6 +407,7 @@ class StudentPage(page):
         tittle = get_config_titulo()
         logo_cfg = get_config_logo()
         render_header(self.root, self.nombre_usuario)
+        self.add_logout_button()
 
         content = tk.Frame(self.root, bg=bg)
         content.pack(expand=True, fill="both")
@@ -342,6 +491,7 @@ class StudentPage(page):
         tittle = get_config_titulo()
         logo_cfg = get_config_logo()
         render_header(self.root, self.nombre_usuario)
+        self.add_logout_button()
         content = tk.Frame(self.root, bg=bg)
         content.pack(expand=True)
         tk.Label(content, text="Materiales", font=(tittle[3], tittle[1], "bold"), bg=bg, fg=tittle[2]).pack(pady=(30, 10))
@@ -423,6 +573,7 @@ class StudentPage(page):
             url = seleccion()
             if not url: return
             try:
+                import sys
                 if sys.platform.startswith("win"):
                     import os
                     os.startfile(url)
@@ -445,6 +596,23 @@ class StudentPage(page):
         refrescar()
         self.add_navbar()
 
+    def add_logout_button(self):
+        """
+        Adds a styled 'Cerrar sesión' button at the top-left below the header.
+        Should be called after render_header in each page.
+        """
+        boton_volver_cfg = get_config_boton_volver()
+        btn = tk.Button(
+            self.root,
+            text="Cerrar sesión",
+            command=self.on_logout,
+            bg=boton_volver_cfg["bg"],
+            fg=boton_volver_cfg["fg"],
+            font=boton_volver_cfg["font"],
+            relief=boton_volver_cfg["relief"]
+        )
+        btn.pack(anchor=boton_volver_cfg["anchor"], padx=boton_volver_cfg["padx"], pady=boton_volver_cfg["pady"])
+
 class AppPage(page):
     def __init__(self):
         super().__init__()
@@ -464,7 +632,18 @@ class AppPage(page):
         entrada_cfg = get_config_entrada()
         boton_cfg = get_config_boton()
         logo_cfg = get_config_logo()
+        tittle = get_config_titulo()
+        espacio = tk.Label(self.root, text=" ",bg=bg, height=4) 
+        espacio.pack()
 
+        label_saludo = tk.Label(
+            self.root,
+            text=f"¡Bienvenido a VT0!",
+            font=(tittle[3], tittle[1], "bold"),
+            bg=bg,
+            fg=tittle[2]
+        )
+        label_saludo.pack()
         img = Image.open(logo_cfg[2])
         img = img.resize((200, 252), Image.Resampling.LANCZOS)
         self.logo_img = ImageTk.PhotoImage(img)
